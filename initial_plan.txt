@@ -1,0 +1,1 @@
+The inital plan is to implement CAN to DDS gateway using PEAK-CAN API for CAN-bus and RTI Connext traditional C++ API for DDS. The necessary types for DDS will be given as idl-files, and are based on CANmessages.xlsx spreadsheet description of CAN messages.
