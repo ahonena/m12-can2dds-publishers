@@ -47,29 +47,38 @@
 #include <asm/types.h>
 #include <unistd.h>
 
+/*
 #ifndef NO_RT
+*/
 #include <sys/mman.h>
-
+/*
 #ifdef RTAI
 #include <rtai_lxrt.h>
 #include <rtdm/rtdm.h>
+*/
 
-/* overload the select() system call with the RTDM one, while it isn't by 
+/* overload the select() system call with the RTDM one, while it isn't by
  * RTAI 5.1. Note that this example doesn't care about the timeout */
+ /*
 #define select(n, r, w, e, t)	rt_dev_select(n, r, w, e, RTDM_TIMEOUT_INFINITE)
 #endif
+*/
 
 // PCAN-Basic device used to read on
 // (RT version doesn't handle USB devices)
+
+/*
 #define PCAN_DEVICE     PCAN_PCIBUS1
 #else
+*/
 
 // PCAN-Basic device used to read on
 //#define PCAN_DEVICE     PCAN_USBBUS1
 #define PCAN_DEVICE PCAN_PCIBUS1
-#endif
+//#endif
 
 #include "PCANBasic.h"
+#include "CANread_event_publishers_1.h"
 
 static void signal_handler(int s)
 {
@@ -88,6 +97,21 @@ static int setup_sig_handler(int signum, void (*f)(int))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+/// The CAN-message interpretation:
+void interpret_message(const TPCANMsg& Message){
+	switch(Message.ID){
+		case M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS :
+			printf("M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS message received...\n");
+			break;
+
+	}
+
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary>	Main entry-point for this application. </summary>
 ///
 /// <remarks>	 </remarks>
@@ -98,32 +122,18 @@ static int setup_sig_handler(int signum, void (*f)(int))
 /// <returns>	. </returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char* argv[]) 
+int main(int argc, char* argv[])
 {
 	TPCANStatus Status;
 	unsigned int rx_count = 0;
 	unsigned int pcan_device = PCAN_DEVICE;
-
-#ifndef NO_RT
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 
-#ifdef RTAI
-	// Initialize LXRT
-	RT_TASK *mainr = rt_task_init_schmod(nam2num("EVRD"), 0, 0, 0,
-					     SCHED_FIFO, 0xF);
-	if (!mainr) {
-		printf("pcaneventread(%xh): unable to setup main RT task\n",
-			PCAN_DEVICE);
-		return -1;
-	}
-	rt_make_hard_real_time();
-#endif
-#endif
 
-	// get the device from the cmd line if provided
+	// get the device from the cmd liTPCANMsgne if provided
 	if (argc > 1) {
 		char *endptr;
-		unsigned long tmp = strtoul(argv[1], &endptr, 0); 
+		unsigned long tmp = strtoul(argv[1], &endptr, 0);
 		if (*endptr == '\0')
 			pcan_device = tmp;
 	}
@@ -131,6 +141,7 @@ int main(int argc, char* argv[])
 	// be INTRuptible by user
 	setup_sig_handler(SIGINT, signal_handler);
 
+	// Used M12 CAN-bus baudrate is 500k
 	Status = CAN_Initialize(pcan_device, PCAN_BAUD_500K, 0, 0, 0);
 	printf("CAN_Initialize(%xh): Status=0x%x\n", pcan_device, (int)Status);
 	if (Status)
@@ -177,39 +188,29 @@ int main(int argc, char* argv[])
 		}
 
 		// emergency exit...
-		if (Message.ID == 0xff && Message.LEN == 1 && Message.DATA[0] == 0xff)
-			break;
+		//if (Message.ID == 0xff && Message.LEN == 1 && Message.DATA[0] == 0xff)
+		//	break;
 
-		rx_count++;
+		//rx_count++;
+		interpret_message(Message);
+		/*
 		printf("  - R ID:%4x LEN:%1x DATA:%02x %02x %02x %02x %02x %02x %02x %02x\n",
 				(int) Message.ID, (int) Message.LEN, (int) Message.DATA[0],
 				(int) Message.DATA[1], (int) Message.DATA[2],
 				(int) Message.DATA[3], (int) Message.DATA[4],
 				(int) Message.DATA[5], (int) Message.DATA[6],
 				(int) Message.DATA[7]);
+				*/
 
-#ifdef XENOMAI
-		// force flush of printf buffers 
-		if (!(rx_count % 100))
-			rt_print_flush_buffers();
 	}
 
-	rt_print_flush_buffers();
-#else
-	}
-#endif
 
-	printf("pcaneventread(%xh): received %u message(s)\n", pcan_device, rx_count);
+//	printf("pcaneventread(%xh): received %u message(s)\n", pcan_device, rx_count);
+printf("Shutting down the system...\n");
 
 lbl_close:
 	CAN_Uninitialize(pcan_device);
 
 lbl_exit:
-#ifdef XENOMAI
-#elif defined(RTAI)
-	rt_make_soft_real_time();
-	rt_task_delete(mainr);
-#endif
-
 	return 0;
 }

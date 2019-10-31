@@ -1,10 +1,13 @@
 #ifndef CANread_event_publishers_1
 #define CANread_event_publishers_1
 
+#include "PCANBasic.h"
+
+
 
 //#define M12_COBID_
 // Values are defined in the file CANmessages.xlsx
-#define M12_COBID_HYRAULIC_REQUESTS_AND_STATUS	0x288
+#define M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS	0x288
 #define M12_COBID_WORK_PUMP_REFERENCE		0x188
 #define M12_COBID_WORK_PUMP_PRESSURE		0x488
 #define M12_COBID_PRESSURE_TILT_AND_LIFT 	0x189
@@ -43,10 +46,6 @@
 #define M12_HEARTBEAT_EM_STOP			0x70a
 #define M12_HEARTBEAT_RESOLVER			0x71f
 #define M12_HEARTBEAT_M4_STEER			0x714
-
-
-
-
 
 
 
