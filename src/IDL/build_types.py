@@ -13,7 +13,7 @@ subprocess.call(['rm', '-rf', 'M12Typelib'])
 cmd = 'rtiddsgen'
 platform = 'x64Linux4gcc7.3.0'
 platform_arg = " -platform " + platform
-language = "C++11"
+language = "C++"
 language_arg = " -language " + language
 update_arg = " -autoGenFiles " + platform
 #constructor_arg = " -constructor"
@@ -82,7 +82,7 @@ for dirpath, dirnames, filenames in os.walk('.'):
 
 os.chdir(script_base_dir)
 for dirpath, dirnames, filenames in os.walk('.'):
-    for filename in [f for f in filenames if f.endswith(".hpp")]:
+    for filename in [f for f in filenames if f.endswith((".hpp",".h"))]:
         print("Copying following header file: ")
         print(os.path.join(dirpath,filename))
         print("")
