@@ -40,6 +40,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#include "CANread_event_publishers_1.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -50,6 +52,7 @@
 /*
 #ifndef NO_RT
 */
+
 #include <sys/mman.h>
 /*
 #ifdef RTAI
@@ -77,8 +80,7 @@
 #define PCAN_DEVICE PCAN_PCIBUS1
 //#endif
 
-#include "PCANBasic.h"
-#include "CANread_event_publishers_1.h"
+//#include "PCANBasic.h"
 
 static void signal_handler(int s)
 {
@@ -99,12 +101,14 @@ static int setup_sig_handler(int signum, void (*f)(int))
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The CAN-message interpretation:
 void interpret_message(const TPCANMsg& Message){
+
 	switch(Message.ID){
 		case M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS :
 			printf("M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS message received...\n");
 			break;
 
 	}
+
 
 }
 
@@ -124,6 +128,13 @@ void interpret_message(const TPCANMsg& Message){
 
 int main(int argc, char* argv[])
 {
+
+	DDSDomainParticipantFactory* factory = NULL;
+factory = DDSDomainParticipantFactory::get_instance();
+if (factory == NULL) {
+   // ... error
+}
+
 	TPCANStatus Status;
 	unsigned int rx_count = 0;
 	unsigned int pcan_device = PCAN_DEVICE;

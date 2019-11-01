@@ -1,13 +1,26 @@
-#ifndef CANread_event_publishers_1
-#define CANread_event_publishers_1
+//#ifndef CANread_event_publishers_1
+//#define CANread_event_publishers_1
+#include "ndds/ndds_cpp.h"
+#include "WorkHydraulicsRequests.h"
+#include "WorkHydraulicsRequestsSupport.h"
+#include "WorkHydraulicsRequestsPlugin.h"
 
 #include "PCANBasic.h"
 
 
 
+
+
+
+
+
+
+
 //#define M12_COBID_
 // Values are defined in the file CANmessages.xlsx
+
 #define M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS	0x288
+
 #define M12_COBID_WORK_PUMP_REFERENCE		0x188
 #define M12_COBID_WORK_PUMP_PRESSURE		0x488
 #define M12_COBID_PRESSURE_TILT_AND_LIFT 	0x189
@@ -20,6 +33,7 @@
 #define M12_COBID_TILTLIFT_POSITION		0x186
 
 #define M12_COBID_EM_STOP_CONTROLLER		0x181
+#include "ndds/ndds_cpp.h"
 
 #define M12_COBID_PUMP_TARGET_ANGLE_AND_RPM	0x18a
 #define M12_COBID_PUMP_TARGET_POWER		0x28a
@@ -52,4 +66,4 @@
 
 
 
-#endif
+//#endif
