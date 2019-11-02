@@ -1,0 +1,3 @@
+struct M12_Resolver{
+double position;
+};

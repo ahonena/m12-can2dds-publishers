@@ -1,0 +1,4 @@
+struct RawCAN{
+	int32 COBID;
+	octet data[8];
+};

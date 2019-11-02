@@ -1,0 +1,6 @@
+enum hsd_direction_enum{FORWARD, BACKWARD};
+
+struct M12_input_and_hsd{
+double hsd_motor_speed;
+hsd_direction_enum hsd_direction;
+};

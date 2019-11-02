@@ -1,0 +1,6 @@
+struct M12_IMU_gyro{
+double x_rate;
+double y_rate;
+double z_rate;
+double chip_temperature;
+};

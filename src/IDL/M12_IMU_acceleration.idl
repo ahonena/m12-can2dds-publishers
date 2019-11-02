@@ -1,0 +1,6 @@
+struct M12_IMU_acceleration{
+double x_acceleration;
+double y_acceleration;
+double z_acceleration;
+octet diagnostic_state[2];
+};
