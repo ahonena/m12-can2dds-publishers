@@ -4,7 +4,9 @@
 #include <dds/domain/ddsdomain.hpp>
 #include <dds/core/ddscore.hpp>
 #include <dds/topic/ddstopic.hpp>
-
+#include <dds/pub/ddspub.hpp>
+#include <dds/sub/ddssub.hpp>
+#include <rti/core/ListenerBinder.hpp>
 
 static volatile sig_atomic_t stop = 0;
 
@@ -39,6 +41,22 @@ M12_CAN2DDS::M12_CAN2DDS(TPCANBaudrate CAN_bitrate){
   }
 
 
+
+}
+//------------------------------------------------------------------------------
+M12_CAN2DDS::~M12_CAN2DDS(){
+  std::cout << "Destructor called..." << std::endl;
+
+}
+
+
+
+
+//------------------------------------------------------------------------------
+void M12_CAN2DDS::listen_and_publish(){
+
+
+
   //DDS LEVEL INITIALIZATION ---------------------------------------------------
   dds::domain::DomainParticipant participant_m12(dds_domain);
   dds::pub::Publisher publisher_m12(participant_m12);
@@ -54,28 +72,39 @@ M12_CAN2DDS::M12_CAN2DDS(TPCANBaudrate CAN_bitrate){
   //M12_WorkHydraulicPosition
   //M12_WorkHydraulicPressures
 
-  dds::topic::Topic<M12_IMU_acceleration> IMU_acceleration_topic(participant_m12, "IMU_acceleration");
+
+
+  dds::topic::Topic<M12_IMU_acceleration> M12_IMU_acceleration_topic(participant_m12, "IMU_acceleration");
   dds::topic::Topic<M12_input_and_hsd> M12_input_and_hsd_topic(participant_m12, "Driver_input");
   dds::topic::Topic<M12_Resolver> M12_Resolver_topic(participant_m12, "Resolver");
   dds::topic::Topic<M12_IMU_gyro> M12_IMU_gyro_topic(participant_m12, "IMU_gyro");
   dds::topic::Topic<M12_RawCAN> M12_RawCAN_topic(participant_m12, "RawCAN");
   dds::topic::Topic<M12_EMstop> M12_EMstop_topic(participant_m12, "EMstop_status");
   dds::topic::Topic<M12_WorkHydraulicPosition> M12_WorkHydraulicPosition_topic(participant_m12, "WorkHydraulicPositions");
-  dds::topic::Topic<M12_WorkHydraulicPressures> M12_WorkHydraulicPressures(participant_m12, "WorkHydraulicPressures");
+  dds::topic::Topic<M12_WorkHydraulicPressures> M12_WorkHydraulicPressures_topic(participant_m12, "WorkHydraulicPressures");
 
+  dds::pub::Publisher publisher_M12(participant_m12);
 
-}
-//------------------------------------------------------------------------------
-M12_CAN2DDS::~M12_CAN2DDS(){
-  std::cout << "Destructor called..." << std::endl;
+  dds::pub::DataWriter<M12_IMU_acceleration> writer_IMU_acceleration_topic(publisher_M12, M12_IMU_acceleration_topic);
+  dds::pub::DataWriter<M12_input_and_hsd> writer_M12_input_and_hsd_topic(publisher_M12, M12_input_and_hsd_topic);
+  dds::pub::DataWriter<M12_Resolver> writer_M12_Resolver_topic(publisher_M12, M12_Resolver_topic);
+  dds::pub::DataWriter<M12_IMU_gyro> writer_M12_IMU_gyro_topic(publisher_M12, M12_IMU_gyro_topic);
+  dds::pub::DataWriter<M12_RawCAN> writer_M12_RawCAN_topic(publisher_M12, M12_RawCAN_topic);
+  dds::pub::DataWriter<M12_EMstop> writer_M12_EMstop_topic(publisher_M12, M12_EMstop_topic);
+  dds::pub::DataWriter<M12_WorkHydraulicPosition> writer_M12_WorkHydraulicPosition_topic(publisher_M12, M12_WorkHydraulicPosition_topic);
+  dds::pub::DataWriter<M12_WorkHydraulicPressures> writer_M12_WorkHydraulicPressures_topic(publisher_M12, M12_WorkHydraulicPressures_topic);
 
-}
+  M12_IMU_acceleration imu_acc_sample;
+  M12_input_and_hsd input_sample;
+  M12_Resolver resolver_sample;
+  M12_IMU_gyro imu_gyro_sample;
+  M12_RawCAN rawcan_sample;
+  M12_EMstop emstop_sample;
+  M12_WorkHydraulicPosition workpos_sample;
+  M12_WorkHydraulicPressures workpres_sample;
 
+  //std::cout << "RawCAN sample, COBID: " << rawcan_sample.COBID() << std::endl;
 
-
-
-//------------------------------------------------------------------------------
-void M12_CAN2DDS::listen_and_publish(){
   signal(SIGINT, keyboard_interrupt_handler);
   std::cout << "Listening to CAN bus channel 1, PCAN code: " << pcan_device << std::endl;
 
@@ -117,12 +146,7 @@ void M12_CAN2DDS::listen_and_publish(){
       throw std::logic_error(errormsg_);
     }
 
-    // emergency exit...
-    //if (Message.ID == 0xff && Message.LEN == 1 && Message.DATA[0] == 0xff)
-    //	break;
-
-    //rx_count++;
-    //nterpret_message(Message);
+    // CAN MESSAGE INTERPRETATION-----------------------------------------------
     switch(Message.ID){
       case 0x189:{
         std::cout << "Hydraulic pressures message received..." << std::endl;
@@ -131,6 +155,16 @@ void M12_CAN2DDS::listen_and_publish(){
 
       default:{
         std::cout << "Raw CAN message received..." << std::endl;
+
+        dds::core::array<uint8_t, 8> tmp_array;
+        for(int i = 0; i<8; i++){
+          tmp_array.at(i) = Message.DATA[i];
+          //std::cout << (int)tmp_array.at(i) << std::endl;
+        }
+
+        rawcan_sample.COBID((int32_t) Message.ID);
+        rawcan_sample.data(tmp_array);
+        writer_M12_RawCAN_topic.write(rawcan_sample);
         break;
       }
     }

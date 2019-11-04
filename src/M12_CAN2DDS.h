@@ -27,7 +27,7 @@
 #include "M12_WorkHydraulicPressures.hpp"
 #include "M12_WorkHydraulicPressuresPlugin.hpp"
 
-
+#include <dds/domain/ddsdomain.hpp>
 
 
 
