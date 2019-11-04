@@ -1,8 +1,9 @@
 #include "M12_CAN2DDS.h"
 #include <unistd.h>
 #include <sys/mman.h>
-
-//#include <string>
+#include <dds/domain/ddsdomain.hpp>
+#include <dds/core/ddscore.hpp>
+#include <dds/topic/ddstopic.hpp>
 
 
 static volatile sig_atomic_t stop = 0;
@@ -13,7 +14,7 @@ void keyboard_interrupt_handler(int sig){
 
 //------------------------------------------------------------------------------
 M12_CAN2DDS::M12_CAN2DDS(TPCANBaudrate CAN_bitrate){
-
+  //CAN LEVEL INITIALIZATION ---------------------------------------------------
   unsigned int rx_count = 0;
   pcan_device = PCAN_PCIBUS1;
   //mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -37,10 +38,37 @@ M12_CAN2DDS::M12_CAN2DDS(TPCANBaudrate CAN_bitrate){
     throw std::logic_error(errormsg_);
   }
 
+
+  //DDS LEVEL INITIALIZATION ---------------------------------------------------
+  dds::domain::DomainParticipant participant_m12(dds_domain);
+  dds::pub::Publisher publisher_m12(participant_m12);
+
+  // Implemented types (4.11.2019)
+
+  //M12_IMU_acceleration
+  //M12_input_and_hsd
+  //M12_Resolver
+  //M12_IMU_gyro
+  //M12_RawCAN
+  //M12_EMstop
+  //M12_WorkHydraulicPosition
+  //M12_WorkHydraulicPressures
+
+  dds::topic::Topic<M12_IMU_acceleration> IMU_acceleration_topic(participant_m12, "IMU_acceleration");
+  dds::topic::Topic<M12_input_and_hsd> M12_input_and_hsd_topic(participant_m12, "Driver_input");
+  dds::topic::Topic<M12_Resolver> M12_Resolver_topic(participant_m12, "Resolver");
+  dds::topic::Topic<M12_IMU_gyro> M12_IMU_gyro_topic(participant_m12, "IMU_gyro");
+  dds::topic::Topic<M12_RawCAN> M12_RawCAN_topic(participant_m12, "RawCAN");
+  dds::topic::Topic<M12_EMstop> M12_EMstop_topic(participant_m12, "EMstop_status");
+  dds::topic::Topic<M12_WorkHydraulicPosition> M12_WorkHydraulicPosition_topic(participant_m12, "WorkHydraulicPositions");
+  dds::topic::Topic<M12_WorkHydraulicPressures> M12_WorkHydraulicPressures(participant_m12, "WorkHydraulicPressures");
+
+
 }
 //------------------------------------------------------------------------------
 M12_CAN2DDS::~M12_CAN2DDS(){
   std::cout << "Destructor called..." << std::endl;
+
 }
 
 

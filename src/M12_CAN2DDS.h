@@ -38,6 +38,7 @@ private:
   int fd;
   TPCANStatus Status;
   unsigned int pcan_device;
+  int dds_domain = 0;
 public:
   M12_CAN2DDS(TPCANBaudrate);
   ~M12_CAN2DDS();
