@@ -8,6 +8,8 @@
 #include <dds/sub/ddssub.hpp>
 #include <rti/core/ListenerBinder.hpp>
 
+#include <bitset>
+
 static volatile sig_atomic_t stop = 0;
 
 void keyboard_interrupt_handler(int sig){
@@ -94,11 +96,11 @@ void M12_CAN2DDS::listen_and_publish(){
   dds::pub::DataWriter<M12_WorkHydraulicPosition> writer_M12_WorkHydraulicPosition_topic(publisher_M12, M12_WorkHydraulicPosition_topic);
   dds::pub::DataWriter<M12_WorkHydraulicPressures> writer_M12_WorkHydraulicPressures_topic(publisher_M12, M12_WorkHydraulicPressures_topic);
 
-  M12_IMU_acceleration imu_acc_sample;
-  M12_input_and_hsd input_sample;
+
+
   M12_Resolver resolver_sample;
   M12_IMU_gyro imu_gyro_sample;
-  M12_RawCAN rawcan_sample;
+
   M12_EMstop emstop_sample;
   M12_WorkHydraulicPosition workpos_sample;
   M12_WorkHydraulicPressures workpres_sample;
@@ -106,7 +108,7 @@ void M12_CAN2DDS::listen_and_publish(){
   //std::cout << "RawCAN sample, COBID: " << rawcan_sample.COBID() << std::endl;
 
   signal(SIGINT, keyboard_interrupt_handler);
-  std::cout << "Listening to CAN bus channel 1, PCAN code: " << pcan_device << std::endl;
+  std::cout << "Listening to PCAN-PCI channel 1 (first from the right), PCAN code: " << pcan_device << std::endl;
 
 
   fd_set fds;
@@ -120,7 +122,7 @@ void M12_CAN2DDS::listen_and_publish(){
     if (err != 1 || !FD_ISSET(fd, &fds)) {
       //printf("select(%xh) failure: %d\n", pcan_device, err);
       //std::cout << "FD_ISSET(fd, &fds): " << FD_ISSET(fd, &fds) << std::endl;
-      auto errormsg_ = "System call \"select\" failure, error code: " + std::to_string(err);
+      auto errormsg_ = "System call \"select\" failure. Exiting program...";
       std::cerr << errormsg_ << std::endl;
       continue;
       //throw std::logic_error(errormsg_);
@@ -147,34 +149,121 @@ void M12_CAN2DDS::listen_and_publish(){
     }
 
     // CAN MESSAGE INTERPRETATION-----------------------------------------------
+    // -------------------------------------------------------------------------
     switch(Message.ID){
+
+      // IMU acceleration
+      case 0x2B2:{
+        double g_ = 9.82; // m/s² per 1 g
+        double g_per_unit = 0.25*0.001;// From ADIS 16385 documentation
+        double acc_per_unit = g_*g_per_unit;
+
+        uint8_t byte_0 = Message.DATA[0];
+        uint8_t byte_1 = Message.DATA[1];
+        int unit_acceleration_x = 0;
+        unit_acceleration_x = int (byte_0 << 8 | byte_1);
+
+        uint8_t byte_2 = Message.DATA[2];
+        uint8_t byte_3 = Message.DATA[3];
+        int unit_acceleration_y = 0;
+        unit_acceleration_y = int (byte_2 << 8 | byte_3);
+
+        uint8_t byte_4 = Message.DATA[4];
+        uint8_t byte_5 = Message.DATA[5];
+        int unit_acceleration_z = 0;
+        unit_acceleration_z = int (byte_4 << 8 | byte_5);
+
+        double acc_x = double (unit_acceleration_x)*acc_per_unit;
+        double acc_y = double (unit_acceleration_y)*acc_per_unit;
+        double acc_z = double (unit_acceleration_z)*acc_per_unit;
+
+        M12_IMU_acceleration imu_acc_sample;
+        imu_acc_sample.x_acceleration(acc_x);
+        imu_acc_sample.y_acceleration(acc_y);
+        imu_acc_sample.z_acceleration(acc_z);
+
+        std::array<uint8_t,2> diagnostic_state = {Message.DATA[6],Message.DATA[7]};
+        imu_acc_sample.diagnostic_state(diagnostic_state);
+
+        writer_IMU_acceleration_topic.write(imu_acc_sample);
+        break;
+      }
+
+      // Input and HSD
+      case 0x485:{
+
+        uint8_t byte_0 = Message.DATA[0];
+        uint8_t byte_1 = Message.DATA[1];
+        uint unit_motor_speed = uint (byte_0 << 8 | byte_1);
+        double motor_speed = 10.0*double (unit_motor_speed);
+
+        hsd_direction_enum motor_direction;
+        uint8_t byte_2 = Message.DATA[2];
+        if(byte_2 == 1){
+          motor_direction = hsd_direction_enum::FORWARD;
+        }
+        else if(byte_2 == 2){
+          motor_direction = hsd_direction_enum::BACKWARD;
+        }
+        else{
+          motor_direction = hsd_direction_enum::UNKNOWN;
+        }
+
+        //std::array<bool,4> buttons;
+
+        uint8_t byte_5 = Message.DATA[5];
+        std::bitset<8> buttons_bitset(byte_5);
+        std::array<bool,4> buttons;
+        buttons.at(0) = bool(buttons_bitset.test(0));
+        buttons.at(1) = bool(buttons_bitset.test(1));
+        buttons.at(2) = bool(buttons_bitset.test(2));
+        buttons.at(3) = bool(buttons_bitset.test(3));
+
+        int8_t joystick_x = Message.DATA[3];
+        int8_t joystick_y = Message.DATA[4];
+
+        uint8_t gas_pedal = Message.DATA[6];
+
+        M12_input_and_hsd input_sample;
+        input_sample.gas_pedal(gas_pedal);
+        input_sample.joystick_x(joystick_x);
+        input_sample.joystick_y(joystick_y);
+        input_sample.buttons(buttons);
+        input_sample.hsd_motor_speed(motor_speed);
+        input_sample.hsd_direction(motor_direction);
+
+        writer_M12_input_and_hsd_topic.write(input_sample);
+        break;
+      }
+
       case 0x189:{
         std::cout << "Hydraulic pressures message received..." << std::endl;
         break;
       }
 
       default:{
-        std::cout << "Raw CAN message received..." << std::endl;
+        std::cout << "Uninterpreted CAN message received..." << std::endl;
 
         dds::core::array<uint8_t, 8> tmp_array;
         for(int i = 0; i<8; i++){
           tmp_array.at(i) = Message.DATA[i];
           //std::cout << (int)tmp_array.at(i) << std::endl;
         }
-
+        M12_RawCAN rawcan_sample;
         rawcan_sample.COBID((int32_t) Message.ID);
         rawcan_sample.data(tmp_array);
         writer_M12_RawCAN_topic.write(rawcan_sample);
         break;
       }
     }
+    /*
     printf("  - R ID:%4x LEN:%1x DATA:%02x %02x %02x %02x %02x %02x %02x %02x\n",
     (int) Message.ID, (int) Message.LEN, (int) Message.DATA[0],
     (int) Message.DATA[1], (int) Message.DATA[2],
     (int) Message.DATA[3], (int) Message.DATA[4],
     (int) Message.DATA[5], (int) Message.DATA[6],
     (int) Message.DATA[7]);
-
+    */
 
   }
 
