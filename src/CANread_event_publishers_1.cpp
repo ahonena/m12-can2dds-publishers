@@ -1,227 +1,24 @@
-//  pcaneventread.cpp
-//
-//  ~~~~~~~~~~~~
-//
-//  PCANBasic Example: Event Read
-//
-//  ~~~~~~~~~~~~
-//
-//  ------------------------------------------------------------------
-//  Author : Thomas Haber (thomas@toem.de)
-//  Last change: 18.06.2010
-//
-//  Language: C++
-//  ------------------------------------------------------------------
-//
-//  Copyright (C) 1999-2010  PEAK-System Technik GmbH, Darmstadt
-//  more Info at http://www.peak-system.com
-//  ------------------------------------------------------------------
-//
-// linux@peak-system.com
-// www.peak-system.com
-//
-//  ------------------------------------------------------------------
-//  History:
-//  07-11-2013 Stephane Grosjean
-//  - Move DWORD definition from "unsigned long" to "__u32" to run on 64-bits
-//    Kernel
-//  - Change initital bitrate from 250K to 500K (default pcan driver bitrate)
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#include "CANread_event_publishers_1.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <string.h>
-#include <asm/types.h>
-#include <unistd.h>
-
-/*
-#ifndef NO_RT
-*/
-
-#include <sys/mman.h>
-/*
-#ifdef RTAI
-#include <rtai_lxrt.h>
-#include <rtdm/rtdm.h>
-*/
-
-/* overload the select() system call with the RTDM one, while it isn't by
- * RTAI 5.1. Note that this example doesn't care about the timeout */
- /*
-#define select(n, r, w, e, t)	rt_dev_select(n, r, w, e, RTDM_TIMEOUT_INFINITE)
-#endif
-*/
-
-// PCAN-Basic device used to read on
-// (RT version doesn't handle USB devices)
-
-/*
-#define PCAN_DEVICE     PCAN_PCIBUS1
-#else
-*/
-
-// PCAN-Basic device used to read on
-//#define PCAN_DEVICE     PCAN_USBBUS1
-#define PCAN_DEVICE PCAN_PCIBUS1
-//#endif
-
-//#include "PCANBasic.h"
-
-static void signal_handler(int s)
-{
-	printf("Interrupted by SIG%u!\n", s);
-}
-
-static int setup_sig_handler(int signum, void (*f)(int))
-{
-	struct sigaction act;
-
-	memset(&act, 0, sizeof act);
-	act.sa_handler = f;
-
-	// note: siagaction() is thread -safe
-	return sigaction(signum, &act, NULL);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// The CAN-message interpretation:
-void interpret_message(const TPCANMsg& Message){
-
-	switch(Message.ID){
-		case M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS :
-			printf("M12_COBID_HYDRAULIC_REQUESTS_AND_STATUS message received...\n");
-			break;
-
-	}
-
-
-}
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary>	Main entry-point for this application. </summary>
-///
-/// <remarks>	 </remarks>
-///
-/// <param name="argc">	The argc. </param>
-/// <param name="argv">	[in,out] If non-null, the argv. </param>
-///
-/// <returns>	. </returns>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
+#include <iostream>
+#include "M12_CAN2DDS.h"
+//------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
+  std::cout << "Starting the test program..." << std::endl;
+  std::cout << "C++ version: " << __cplusplus << std::endl;
 
-	DDSDomainParticipantFactory* factory = NULL;
-factory = DDSDomainParticipantFactory::get_instance();
-if (factory == NULL) {
-   // ... error
-}
-
-	TPCANStatus Status;
-	unsigned int rx_count = 0;
-	unsigned int pcan_device = PCAN_DEVICE;
-	mlockall(MCL_CURRENT | MCL_FUTURE);
+  try{
+    M12_CAN2DDS my_object(PCAN_BAUD_500K);
 
 
-	// get the device from the cmd liTPCANMsgne if provided
-	if (argc > 1) {
-		char *endptr;
-		unsigned long tmp = strtoul(argv[1], &endptr, 0);
-		if (*endptr == '\0')
-			pcan_device = tmp;
-	}
+    my_object.print_stuff();
+    my_object.listen_and_publish();
+  }
+  catch(const std::logic_error e){
+    std::cerr << "ERROR: "<< e.what() << std::endl;
+    //std::cerr << std::endl << "exiting..." << std::endl;
 
-	// be INTRuptible by user
-	setup_sig_handler(SIGINT, signal_handler);
-
-	// Used M12 CAN-bus baudrate is 500k
-	Status = CAN_Initialize(pcan_device, PCAN_BAUD_500K, 0, 0, 0);
-	printf("CAN_Initialize(%xh): Status=0x%x\n", pcan_device, (int)Status);
-	if (Status)
-		goto lbl_exit;
-
-	int fd;
-	Status = CAN_GetValue(pcan_device, PCAN_RECEIVE_EVENT, &fd, sizeof fd);
-	printf("CAN_GetValue(%xh): Status=0x%x\n", pcan_device, (int)Status);
-	if (Status)
-		goto lbl_close;
-
-	printf("Entering infinite loop (reading MSG[ID:0xff LEN:1 DATA[0]:0xff] breaks it)...\n");
-
-	fd_set fds;
-
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-
-	// forever loop
-	while (1) {
-
-		// blocks on read descriptor
-		int err = select(fd+1, &fds, NULL, NULL, NULL);
-		if (err != 1 || !FD_ISSET(fd, &fds)) {
-			printf("select(%xh) failure: %d\n", pcan_device, err);
-			break;
-		}
-
-		TPCANMsg Message;
-		Status = CAN_Read(pcan_device, &Message, NULL);
-
-		if (Status == PCAN_ERROR_QRCVEMPTY) {
-			printf("CAN_Read(%xh) Abnormal PCAN_ERROR_QRCVEMPTY status. Wating 1s before looping (^C to stop)...\n", pcan_device);
-
-			if (usleep(1000000))
-				break;
-
-			continue;
-		}
-
-		if (Status != PCAN_ERROR_OK) {
-			printf("CAN_Read(%xh) failure 0x%x\n", pcan_device, (int) Status);
-			break;
-		}
-
-		// emergency exit...
-		//if (Message.ID == 0xff && Message.LEN == 1 && Message.DATA[0] == 0xff)
-		//	break;
-
-		//rx_count++;
-		interpret_message(Message);
-		/*
-		printf("  - R ID:%4x LEN:%1x DATA:%02x %02x %02x %02x %02x %02x %02x %02x\n",
-				(int) Message.ID, (int) Message.LEN, (int) Message.DATA[0],
-				(int) Message.DATA[1], (int) Message.DATA[2],
-				(int) Message.DATA[3], (int) Message.DATA[4],
-				(int) Message.DATA[5], (int) Message.DATA[6],
-				(int) Message.DATA[7]);
-				*/
-
-	}
-
-
-//	printf("pcaneventread(%xh): received %u message(s)\n", pcan_device, rx_count);
-printf("Shutting down the system...\n");
-
-lbl_close:
-	CAN_Uninitialize(pcan_device);
-
-lbl_exit:
-	return 0;
+    return 1;
+  }
+  std::cout << "Exiting the test program..." << std::endl;
+  return 0;
 }
