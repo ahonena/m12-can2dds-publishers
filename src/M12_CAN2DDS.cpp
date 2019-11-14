@@ -9,6 +9,7 @@
 #include <rti/core/ListenerBinder.hpp>
 
 #include <bitset>
+#include <math.h>
 
 static volatile sig_atomic_t stop = 0;
 
@@ -98,12 +99,9 @@ void M12_CAN2DDS::listen_and_publish(){
 
 
 
-  M12_Resolver resolver_sample;
-  M12_IMU_gyro imu_gyro_sample;
+  //M12_Resolver resolver_sample;
 
-  M12_EMstop emstop_sample;
-  M12_WorkHydraulicPosition workpos_sample;
-  M12_WorkHydraulicPressures workpres_sample;
+
 
   //std::cout << "RawCAN sample, COBID: " << rawcan_sample.COBID() << std::endl;
 
@@ -153,6 +151,7 @@ void M12_CAN2DDS::listen_and_publish(){
     switch(Message.ID){
 
       // IMU acceleration
+
       case 0x2B2:{
         double g_ = 9.82; // m/s² per 1 g
         double g_per_unit = 0.25*0.001;// From ADIS 16385 documentation
@@ -209,8 +208,6 @@ void M12_CAN2DDS::listen_and_publish(){
           motor_direction = hsd_direction_enum::UNKNOWN;
         }
 
-        //std::array<bool,4> buttons;
-
         uint8_t byte_5 = Message.DATA[5];
         std::bitset<8> buttons_bitset(byte_5);
         std::array<bool,4> buttons;
@@ -236,8 +233,113 @@ void M12_CAN2DDS::listen_and_publish(){
         break;
       }
 
+      // Resolver
+      case 0x19F:{
+        std::cout << "Resolver message received..." << std::endl;
+
+        int16_t bytes_0_1 = int16_t (Message.DATA[0] << 8 | Message.DATA[1]);
+        double resolver_angle = static_cast<double>(bytes_0_1);
+        resolver_angle = resolver_angle*0.01; // from 0.01 deg/unit  to 1 deg/unit
+        resolver_angle = (resolver_angle/180.0)*M_PIl;
+
+        int32_t bytes_4_5_6_7 = int32_t (Message.DATA[4] << 24 | Message.DATA[5] << 16 | Message.DATA[6] << 8 | Message.DATA[7]);
+        double resolver_velocity = static_cast<double>(bytes_4_5_6_7);
+        resolver_velocity = 0.01*resolver_velocity;
+        resolver_velocity = (resolver_velocity/180.0)*M_PIl;
+
+        M12_Resolver resolver_sample;
+        resolver_sample.position(resolver_angle);
+        resolver_sample.velocity(resolver_velocity);
+
+        std::cout << "Computed resolver angle in radians: " <<  resolver_angle <<  std::endl;
+        std::cout << "Computed resolver velocity in radians per second: " <<  resolver_velocity <<  std::endl;
+        writer_M12_Resolver_topic.write(resolver_sample);
+        break;
+      }
+
+      case 0x1B2:{
+        std::cout << "IMU gyro message received..." << std::endl;
+
+        int16_t angular_velocity_x = int16_t (Message.DATA[0] << 8 | Message.DATA[1]);
+        int16_t angular_velocity_y = int16_t (Message.DATA[2] << 8 | Message.DATA[3]);
+        int16_t angular_velocity_z = int16_t (Message.DATA[4] << 8 | Message.DATA[5]);
+        int16_t temperature = int16_t (Message.DATA[6] << 8 | Message.DATA[7]);
+
+        double angvx = static_cast<double>(angular_velocity_x);
+        angvx = 0.003125*angvx;
+        angvx = (angvx/180.0)*M_PIl;
+
+        double angvy = static_cast<double>(angular_velocity_y);
+        angvy = 0.003125*angvy;
+        angvy = (angvy/180.0)*M_PIl;
+
+        double angvz = static_cast<double>(angular_velocity_z);
+        angvz = 0.003125*angvz;
+        angvz = (angvz/180.0)*M_PIl;
+
+        double chiptmp = static_cast<double>(temperature);
+        chiptmp = 25.0 + 0.0678*chiptmp;
+
+        M12_IMU_gyro imu_gyro_sample;
+        imu_gyro_sample.x_rate(angvx);
+        imu_gyro_sample.y_rate(angvy);
+        imu_gyro_sample.z_rate(angvz);
+
+        imu_gyro_sample.chip_temperature(chiptmp);
+
+        writer_M12_IMU_gyro_topic.write(imu_gyro_sample);
+        break;
+      }
+
+      case 0x181:{
+        std::cout << "Emergency stop message received..." << std::endl;
+        std::bitset<4> buttons_bitset(Message.DATA[0]);
+        bool is_normal_operation = buttons_bitset.test(0);
+        bool emergency_stop_activated = buttons_bitset.test(1);
+        bool door_switch_bypass_activated = buttons_bitset.test(2);
+        bool dead_mans_switch_pressed = !buttons_bitset.test(3);
+
+        M12_EMstop emstop_sample;
+        emstop_sample.normal_operation(is_normal_operation);
+        emstop_sample.emergency_stop_activated(emergency_stop_activated);
+        emstop_sample.door_switch_bypass_activated(door_switch_bypass_activated);
+        emstop_sample.dead_mans_switch_pressed(dead_mans_switch_pressed);
+
+        writer_M12_EMstop_topic.write(emstop_sample);
+        break;
+      }
+
+      case 0x186:{
+        std::cout << "Work hydraulic actuator positions message received..." << std::endl;
+        int16_t liftpos = int16_t(Message.DATA[0] << 8 | Message.DATA[1]);
+        int16_t tiltpos = int16_t(Message.DATA[2] << 8 | Message.DATA[3]);
+        M12_WorkHydraulicPosition workpos_sample;
+        workpos_sample.lift(static_cast<double>(liftpos));
+        workpos_sample.tilt(static_cast<double>(tiltpos));
+        writer_M12_WorkHydraulicPosition_topic.write(workpos_sample);
+        break;
+      }
+
       case 0x189:{
         std::cout << "Hydraulic pressures message received..." << std::endl;
+
+        uint16_t pA_lift = uint16_t(Message.DATA[0] << 8 | Message.DATA[1]);
+        uint16_t pB_lift = uint16_t(Message.DATA[2] << 8 | Message.DATA[3]);
+        uint16_t pA_tilt = uint16_t(Message.DATA[4] << 8 | Message.DATA[5]);
+        uint16_t pB_tilt = uint16_t(Message.DATA[6] << 8 | Message.DATA[7]);
+
+        double lift_cylA_pressure = 0.01*static_cast<double>(pA_lift);
+        double lift_cylB_pressure = 0.01*static_cast<double>(pB_lift);
+        double tilt_cylA_pressure = 0.01*static_cast<double>(pA_tilt);
+        double tilt_cylB_pressure = 0.01*static_cast<double>(pB_tilt);
+
+        M12_WorkHydraulicPressures workpres_sample;
+        workpres_sample.lift_cylA_pressure(lift_cylA_pressure);
+        workpres_sample.lift_cylB_pressure(lift_cylB_pressure);
+        workpres_sample.tilt_cylA_pressure(tilt_cylA_pressure);
+        workpres_sample.tilt_cylB_pressure(tilt_cylB_pressure);
+
+        writer_M12_WorkHydraulicPressures_topic.write(workpres_sample);
         break;
       }
 
