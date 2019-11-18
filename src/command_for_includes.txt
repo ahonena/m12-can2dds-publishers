@@ -1,3 +1,0 @@
-ls > headerfiles.txt ;
-sed -i -e 's/^/#include "/' headerfiles.txt;
- sed -i -e 's/$/"/' headerfiles.txt
