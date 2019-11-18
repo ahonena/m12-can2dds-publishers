@@ -1,6 +1,10 @@
-enum emstop_enum{NORMAL_OPERATION, EMERGENCY_STOP_ACTIVATED,
-BYPASS_SWITCH_ACTIVATED, DEAD_MANS_SWITCH_NOT_PRESSED};
+//enum emstop_enum{NORMAL_OPERATION, EMERGENCY_STOP_ACTIVATED,
+//BYPASS_SWITCH_ACTIVATED, DEAD_MANS_SWITCH_NOT_PRESSED};
 
 struct M12_EMstop{
-emstop_enum status;
+//emstop_enum status;
+boolean normal_operation;
+boolean emergency_stop_activated;
+boolean door_switch_bypass_activated;
+boolean dead_mans_switch_pressed;
 };
