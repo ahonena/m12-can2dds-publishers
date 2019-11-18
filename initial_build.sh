@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cd src/IDL;
 ./build_types.py;
 ./command_for_includes.sh;

@@ -59,7 +59,7 @@ print("-------------------------------------------------------------------------
 print("Finished generating and compiling the DDS types")
 print("")
 #print("Creating a file named \" generated_types.txt \"  describing which .idl files were generated and compiled...")
-#os.chdir(script_base_dir)
+os.chdir(script_base_dir)
 #with open('generated_types.txt', 'w') as f:
 #    for item in generated_types:
 #        f.write("%s\n" % item)
