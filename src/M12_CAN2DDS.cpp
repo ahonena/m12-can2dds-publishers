@@ -11,6 +11,8 @@
 #include <bitset>
 #include <math.h>
 
+//#define PRINT_STUFF
+
 static volatile sig_atomic_t stop = 0;
 
 void keyboard_interrupt_handler(int sig){
@@ -251,7 +253,9 @@ void M12_CAN2DDS::listen_and_publish(){
 
       // Resolver
       case 0x19F:{
+        #ifdef PRINT_STUFF
         std::cout << "Resolver message received..." << std::endl;
+        #endif
         /*
         int16_t bytes_0_1 = int16_t (Message.DATA[0] << 8 | Message.DATA[1]);
         double resolver_angle = static_cast<double>(bytes_0_1);
@@ -284,7 +288,9 @@ void M12_CAN2DDS::listen_and_publish(){
       }
 
       case 0x1B2:{
+        #ifdef PRINT_STUFF
         std::cout << "IMU gyro message received..." << std::endl;
+        #endif
         /*
         int16_t angular_velocity_x = int16_t (Message.DATA[0] << 8 | Message.DATA[1]);
         int16_t angular_velocity_y = int16_t (Message.DATA[2] << 8 | Message.DATA[3]);
@@ -332,7 +338,9 @@ void M12_CAN2DDS::listen_and_publish(){
       }
 
       case 0x181:{
+        #ifdef PRINT_STUFF
         std::cout << "Emergency stop message received..." << std::endl;
+        #endif
         std::bitset<4> buttons_bitset(Message.DATA[0]);
         bool is_normal_operation = buttons_bitset.test(0);
         bool emergency_stop_activated = buttons_bitset.test(1);
@@ -350,7 +358,9 @@ void M12_CAN2DDS::listen_and_publish(){
       }
 
       case 0x186:{
+        #ifdef PRINT_STUFF
         std::cout << "Work hydraulic actuator positions message received..." << std::endl;
+        #endif
         /*
         int16_t liftpos = int16_t(Message.DATA[0] << 8 | Message.DATA[1]);
         int16_t tiltpos = int16_t(Message.DATA[2] << 8 | Message.DATA[3]);
@@ -369,7 +379,9 @@ void M12_CAN2DDS::listen_and_publish(){
       }
 
       case 0x189:{
+        #ifdef PRINT_STUFF
         std::cout << "Hydraulic pressures message received..." << std::endl;
+        #endif
         /*
         uint16_t pA_lift = uint16_t(Message.DATA[0] << 8 | Message.DATA[1]);
         uint16_t pB_lift = uint16_t(Message.DATA[2] << 8 | Message.DATA[3]);
@@ -404,7 +416,9 @@ void M12_CAN2DDS::listen_and_publish(){
       }
 
       default:{
+        #ifdef PRINT_STUFF
         std::cout << "Uninterpreted CAN message received..." << std::endl;
+        #endif
 
         dds::core::array<uint8_t, 8> tmp_array;
         for(int i = 0; i<8; i++){
