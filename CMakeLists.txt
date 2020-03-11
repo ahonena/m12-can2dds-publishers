@@ -6,10 +6,16 @@ find_package(RTIConnextDDS REQUIRED
 HINTS ${CMAKE_SOURCE_DIR})
 
 
+set(M12_TYPEDIR
+${CMAKE_SOURCE_DIR}/src/m12-idl/IDL
+)
 
 set(DDS_TYPE_OBJECT_DIR
-${CMAKE_SOURCE_DIR}/src/IDL/M12Typelib/objs
+${M12_TYPEDIR}/M12Typelib/objs
 )
+#set(DDS_TYPE_OBJECT_DIR
+#${CMAKE_SOURCE_DIR}/src/IDL/M12Typelib/objs
+#)
 
 
 file(GLOB dds_typeobjs
@@ -40,9 +46,15 @@ set_property(TARGET M12_CAN2DDS PROPERTY CXX_STANDARD 11)
 
 target_include_directories( M12_CAN2DDS PRIVATE
 ${CMAKE_SOURCE_DIR}/src
-${CMAKE_SOURCE_DIR}/src/IDL/M12Typelib/include
+${M12_TYPEDIR}/M12Typelib/include
 ${CONNEXTDDS_INCLUDE_DIRS}
 )
+
+#target_include_directories( M12_CAN2DDS PRIVATE
+#${CMAKE_SOURCE_DIR}/src
+#${CMAKE_SOURCE_DIR}/src/IDL/M12Typelib/include
+#${CONNEXTDDS_INCLUDE_DIRS}
+#)
 
 target_link_libraries( M12_CAN2DDS PUBLIC
 pcanbasic
@@ -62,7 +74,7 @@ ${CMAKE_SOURCE_DIR}/src/CANread_event_publishers_1.cpp
 
 target_include_directories( CANread_event_publishers_1 PRIVATE
   ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_SOURCE_DIR}/src/IDL/M12Typelib/include
+  ${M12_TYPEDIR}/M12Typelib/include
   ${CONNEXTDDS_INCLUDE_DIRS}
 )
 
