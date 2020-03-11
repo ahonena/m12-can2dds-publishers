@@ -1,6 +1,0 @@
-struct M12_IMU_gyro{
-int16 x_rate;
-int16 y_rate;
-int16 z_rate;
-int16 chip_temperature;
-};

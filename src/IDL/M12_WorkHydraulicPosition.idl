@@ -1,4 +1,0 @@
-struct M12_WorkHydraulicPosition{
-int16 lift;
-int16 tilt;
-};

@@ -1,4 +1,0 @@
-struct M12_Resolver{
-int16 position;
-int32 velocity;
-};

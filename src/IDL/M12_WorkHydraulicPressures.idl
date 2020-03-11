@@ -1,6 +1,0 @@
-struct M12_WorkHydraulicPressures{
-uint16 lift_cylA_pressure;
-uint16 lift_cylB_pressure;
-uint16 tilt_cylA_pressure;
-uint16 tilt_cylB_pressure;
-};
