@@ -1,3 +1,4 @@
+// Copyright: (c)  2020 Andrei Ahonen
 #include <iostream>
 #include "M12_CAN2DDS.h"
 //------------------------------------------------------------------------------

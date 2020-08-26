@@ -1,3 +1,4 @@
+// Copyright: (c)  2020 Andrei Ahonen
 //#ifndef CANread_event_publishers_1
 //#define CANread_event_publishers_1
 #include "ndds/ndds_cpp.h"

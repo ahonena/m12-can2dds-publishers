@@ -1,3 +1,4 @@
+// Copyright: (c)  2020 Andrei Ahonen
 #ifndef M12_CAN2DDS_H
 #define M12_CAN2DDS_H
 #include <iostream>

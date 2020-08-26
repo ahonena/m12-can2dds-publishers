@@ -1,3 +1,4 @@
+// Copyright: (c)  2020 Andrei Ahonen
 #include "M12_CAN2DDS.h"
 #include <unistd.h>
 #include <sys/mman.h>
